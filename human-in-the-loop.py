@@ -26,6 +26,7 @@ memory = MemorySaver()
 class State(TypedDict):
     messages: Annotated[list, add_messages]
 
+#similar to pythons input() function , calling 'interrupt' inside the tool will pause execution.
 @tool
 def human_assistance(query: str) -> str:
     """Request assistance from a human."""
@@ -63,6 +64,17 @@ config = {"configurable": {"thread_id": "1"}}
 
 user_input = "Hi, I require some expert guidance in building an AI agent?"
 
+#as the chatbot is interrupted during use in human_assistance tool
+##we need to resume execution
+##to resume execution we need to pass a Command object containing data expected by the toll.
+#the format of the data can be customised based on needs .
+##for this example dictionary with key "data"
+
+human_response = ("We are here to help! Check out LangGraphs website")
+
+human_command = Command(resume={"data": human_response})
+
+
 events = graph.stream(
     {"messages": [{"role": "user", "content": user_input}]},
     config,
@@ -71,4 +83,18 @@ events = graph.stream(
 
 for event in events:
     if "messages" in event:
+        #print(event)
         event["messages"][-1].pretty_print()
+
+#chatbot generated a toll call, but execution was interrupted
+#inspect graph state
+snapshot = graph.get_state(config)
+print(snapshot.next)
+
+events = graph.stream(human_command, config, stream_mode="values")
+for event in events:
+    if "messages" in event:
+        event["messages"][-1].pretty_print()
+
+snapshot = graph.get_state(config)
+print(snapshot.next)
